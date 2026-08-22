@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>ConfigHub 配置项</title>
+<style>
+body{font-family:system-ui,sans-serif;margin:2rem;color:#222}
+nav a{margin-right:1rem}
+table{border-collapse:collapse;margin-top:.5rem}
+td,th{border:1px solid #ccc;padding:.4rem .7rem;text-align:left}
+</style>
+</head>
+<body>
+<h1>ConfigHub 配置项</h1>
+<nav><a href="/items">配置项</a><a href="/releases">发布</a><a href="/subscriptions">订阅</a><a href="/audit">审计</a></nav>
+<table id="items"><thead><tr><th>命名空间</th><th>Key</th><th>Value</th><th>版本</th><th>过期</th></tr></thead><tbody></tbody></table>
+<script>
+async function load(){
+  const res = await fetch('/api/namespaces');
+  const nss = await res.json();
+  const tb = document.querySelector('#items tbody');
+  tb.innerHTML = '';
+  for (const ns of nss) {
+    const items = await (await fetch('/api/items?namespace=' + encodeURIComponent(ns.id))).json();
+    for (const it of items) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${ns.id}</td><td>${it.key}</td><td>${it.value}</td><td>${it.version}</td><td>${it.expires}</td>`;
+      tb.appendChild(tr);
+    }
+  }
+}
+load();
+</script>
+</body>
+</html>
