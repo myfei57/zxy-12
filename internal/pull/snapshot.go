@@ -19,13 +19,14 @@ func (m *Manager) Pull(namespace string) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	// Every generation down to the first is merged into the store, so an
-	// older generation can overwrite values the newer generation restored.
-	for gen := generation; gen >= 1; gen-- {
-		path := m.SnapshotPath(namespace, gen)
-		if err := m.Load(path); err != nil {
-			return 0, err
-		}
+	// A snapshot generation is a full snapshot of every key for its version,
+	// so switching to the target version is a single load. Concatenating older
+	// generations on top would let stale values overwrite the target version,
+	// mixing old and new values for the same key; the store must cut over to
+	// the target generation in one shot rather than merging file by file.
+	path := m.SnapshotPath(namespace, generation)
+	if err := m.Load(path); err != nil {
+		return 0, err
 	}
 	return generation, nil
 }
