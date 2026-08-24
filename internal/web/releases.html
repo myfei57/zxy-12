@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>ConfigHub 发布</title>
+<style>
+body{font-family:system-ui,sans-serif;margin:2rem;color:#222}
+nav a{margin-right:1rem}
+table{border-collapse:collapse;margin-top:.5rem}
+td,th{border:1px solid #ccc;padding:.4rem .7rem;text-align:left}
+</style>
+</head>
+<body>
+<h1>ConfigHub 发布与快照</h1>
+<nav><a href="/items">配置项</a><a href="/releases">发布</a><a href="/subscriptions">订阅</a><a href="/audit">审计</a></nav>
+<table id="versions"><thead><tr><th>命名空间</th><th>修订号</th><th>已发布版本</th><th>状态</th></tr></thead><tbody></tbody></table>
+<script>
+async function load(){
+  const nss = await (await fetch('/api/namespaces')).json();
+  const tb = document.querySelector('#versions tbody');
+  tb.innerHTML = '';
+  for (const ns of nss) {
+    const v = await (await fetch('/api/version?namespace=' + encodeURIComponent(ns.id))).json();
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${ns.id}</td><td>${v.revision}</td><td>${v.published}</td><td>${v.state}</td>`;
+    tb.appendChild(tr);
+  }
+}
+load();
+</script>
+</body>
+</html>
