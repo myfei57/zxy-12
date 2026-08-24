@@ -28,17 +28,13 @@ func Release(
 	if d.State == draft.Superseded {
 		return fmt.Errorf("publish: draft %s/%s is superseded", namespace, key)
 	}
-	// The version ledger moves before the config file is durably stored, so a
-	// failed write leaves the new version pointing at a config that never hit
-	// disk.
+	// The config file is durably stored before the version ledger advances,
+	// so a failed write can never leave the new version pointing at a config
+	// that never hit disk. If Set or Commit fails the ledger is untouched,
+	// leaving the previous published version intact and the next attempt free
+	// to reuse this revision.
 	revision, err := ledger.NextRevision()
 	if err != nil {
-		return err
-	}
-	if err := ledger.Advance(revision); err != nil {
-		return err
-	}
-	if err := ledger.SetPublished(revision); err != nil {
 		return err
 	}
 	op, err := store.Set(namespace, key, value, 0)
@@ -46,6 +42,12 @@ func Release(
 		return err
 	}
 	if err := store.Commit(op.Seq); err != nil {
+		return err
+	}
+	if err := ledger.Advance(revision); err != nil {
+		return err
+	}
+	if err := ledger.SetPublished(revision); err != nil {
 		return err
 	}
 	if _, err := snapshots.Build(namespace, revision); err != nil {
