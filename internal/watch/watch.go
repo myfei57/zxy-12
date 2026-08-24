@@ -21,14 +21,13 @@ type Subscription struct {
 
 // Manager tracks subscriptions and their push cursors.
 type Manager struct {
-	mu             sync.Mutex
-	subs           map[string]*Subscription
-	cursorRoot     string
-	store          *item.Store
-	ledger         *version.Manager
-	acks           *snapshot.AckState
-	snapshotter    SnapshotBuilder
-	cachedPublished map[string]uint64
+	mu          sync.Mutex
+	subs        map[string]*Subscription
+	cursorRoot  string
+	store       *item.Store
+	ledger      *version.Manager
+	acks        *snapshot.AckState
+	snapshotter SnapshotBuilder
 }
 
 // SnapshotBuilder materializes a version snapshot for a namespace.
@@ -45,17 +44,18 @@ func NewManager(
 	snapshotter SnapshotBuilder,
 ) *Manager {
 	return &Manager{
-		subs:            make(map[string]*Subscription),
-		cursorRoot:      cursorRoot,
-		store:           store,
-		ledger:          ledger,
-		acks:            acks,
-		snapshotter:     snapshotter,
-		cachedPublished: make(map[string]uint64),
+		subs:        make(map[string]*Subscription),
+		cursorRoot:  cursorRoot,
+		store:       store,
+		ledger:      ledger,
+		acks:        acks,
+		snapshotter: snapshotter,
 	}
 }
 
-// Subscribe registers a client and captures the currently published version.
+// Subscribe registers a client. The published version is read fresh from the
+// ledger at push time, so a publish that completes after subscribing is
+// reflected in the pushed snapshot.
 func (m *Manager) Subscribe(clientID string, namespace string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -67,7 +67,6 @@ func (m *Manager) Subscribe(clientID string, namespace string) error {
 		}
 	}
 	m.subs[clientID] = sub
-	m.cachedPublished[clientID] = m.ledger.Current().Published
 	return nil
 }
 
