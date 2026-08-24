@@ -23,15 +23,16 @@ func Run(
 	if err != nil {
 		return err
 	}
-	// The revision moves before the old config is durably restored, so a
-	// failed restore leaves the revision pointing at a value that never landed.
+	// The old config must be durably restored before the revision advances;
+	// otherwise a failed restore leaves the revision pointing at a value that
+	// never landed on disk.
+	if err := store.Restore(namespace, key, target.Value); err != nil {
+		return err
+	}
 	if err := ledger.Advance(target.Revision); err != nil {
 		return err
 	}
 	if err := ledger.SetPublished(target.Revision); err != nil {
-		return err
-	}
-	if err := store.Restore(namespace, key, target.Value); err != nil {
 		return err
 	}
 	if err := drafts.Supersede(namespace, key); err != nil {
